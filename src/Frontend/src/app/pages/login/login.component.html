@@ -1,0 +1,66 @@
+<app-custom-toast></app-custom-toast>
+<div class="bg-light min-vh-100 d-flex flex-row align-items-center">
+  <c-container>
+    <c-row class="justify-content-center">
+      <c-col md="8">
+        <c-card-group>
+          <c-card class="p-4">
+            <c-card-body>
+              <form cForm #f="ngForm">
+                <h1>Login</h1>
+                <p class="text-medium-emphasis">Sign In to your account</p>
+                <c-input-group class="mb-3">
+                  <span cInputGroupText>
+                    <svg cIcon name="cilUser"></svg>
+                  </span>
+                  <label class="visually-hidden" for="username">Username</label>
+                  <input
+                    [ngModelOptions]="{ standalone: true }"
+                    [(ngModel)]="user"
+                    [value]="user"
+                    autoComplete="username"
+                    cFormControl
+                    placeholder="Username"
+                    id="username"
+                  />
+                </c-input-group>
+                <c-input-group class="mb-4">
+                  <span cInputGroupText>
+                    <svg cIcon name="cilLockLocked"></svg>
+                  </span>
+                  <label class="visually-hidden" for="password">Password</label>
+                  <input
+                    [ngModelOptions]="{ standalone: true }"
+                    [(ngModel)]="password"
+                    [value]="password"
+                    autoComplete="current-password"
+                    cFormControl
+                    placeholder="Password"
+                    type="password"
+                    id="password"
+                  />
+                </c-input-group>
+                <c-row>
+                  <c-col xs="6">
+                    <button
+                      (click)="goLogin()"
+                      cButton
+                      class="px-4"
+                      color="primary"
+                      id="loginButton"
+                    >
+                      Login
+                    </button>
+                    <button (click)="goBack()" cButton class="px-4 ms-2" color="secondary">
+                      Back
+                    </button>
+                  </c-col>
+                </c-row>
+              </form>
+            </c-card-body>
+          </c-card>
+        </c-card-group>
+      </c-col>
+    </c-row>
+  </c-container>
+</div>

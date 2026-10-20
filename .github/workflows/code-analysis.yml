@@ -1,0 +1,34 @@
+name: Code Analysis
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+    paths:
+      # Backend
+      - "**.cs"
+      - "**.csproj"
+      # Frontend
+      - "src/Frontend/**"
+      - "**.js"
+      - "**.jsx"
+      - "**.ts"
+      - "**.tsx"
+      - "**.json"
+
+jobs:
+  backend:
+    name: Code Analysis Backend
+    uses: ./.github/workflows/reusable-code-analysis-backend.yml
+    permissions: write-all
+    with:
+        solution-path: "./src/Backend"
+        solution-name: "PharmaGo.sln"
+  
+  frontend:
+    name: Code Analysis Frontend
+    uses: ./.github/workflows/reusable-code-analysis-frontend.yml
+    permissions: write-all
+    with:
+        frontend-path: "./src/Frontend"
+        node-version: "20.x"

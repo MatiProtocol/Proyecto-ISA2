@@ -1,0 +1,8 @@
+node_modules/
+dist/
+build/
+eslint-report.json
+prettier-output.txt
+.angular/
+coverage/
+cypress.config.ts

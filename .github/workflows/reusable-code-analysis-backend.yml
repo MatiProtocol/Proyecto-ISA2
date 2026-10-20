@@ -1,0 +1,129 @@
+name: "Reusable Code Analysis"
+
+on:
+  workflow_call:
+    inputs:
+      solution-path:
+        type: string
+        description: "Relative path to the .sln file (default: current directory)"
+        required: false
+        default: "."
+      solution-name:
+        type: string
+        description: "Name of the solution file (e.g., MyApp.sln)"
+        required: true
+
+env:
+  DOTNET_VERSION: "8.0.x"
+  FULL_SOLUTION_PATH: ${{ inputs.solution-path }}/${{ inputs.solution-name }}
+
+jobs:
+  analysis:
+    name: Run code analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Run dotnet format and generate report
+        run: |
+          dotnet format "${{ env.FULL_SOLUTION_PATH }}" \
+            --verify-no-changes \
+            --verbosity diagnostic \
+            --report "${{ inputs.solution-path }}/analysis"
+        continue-on-error: true # No fallamos aquí, lo haremos después de analizar el JSON
+
+      - name: Generate clean code table and decide failure
+        id: analysis
+        shell: bash
+        run: |
+          python3 <<'EOF'
+          import json
+          import sys
+          import os
+
+          report_path = "${{ inputs.solution-path }}/analysis/format-report.json"
+
+          if not os.path.isfile(report_path):
+              print(f"❌ Report file not found: {report_path}", file=sys.stderr)
+              sys.exit(1)
+
+          with open(report_path, "r", encoding="utf-8") as f:
+              data = json.load(f)
+
+          issue_count = 0
+          table  = "| File | Line | Diagnostic | Description |\n"
+          table += "|------|------|------------|-------------|\n"
+
+          for entry in data:
+              file_name = entry.get("FileName", "Unknown file")
+              changes   = entry.get("FileChanges", [])
+              for change in changes:
+                  line        = change.get("LineNumber", "-")
+                  diagnostic  = change.get("DiagnosticId", "-")
+                  description = change.get("FormatDescription", "-")
+                  table += f"| `{file_name}` | {line} | `{diagnostic}` | {description} |\n"
+                  issue_count += 1
+
+          table += "|------|------|------------|-------------|\n"
+          if issue_count == 0:
+              table += "| **Total** | | | **✅ 0** |\n"
+              table += "\n*Awesome! No code analysis issues found. 🚀*\n"
+          else:
+              table += f"| **Total** | | | **❌ {issue_count}** |\n"
+              table += "\n*Please fix the issues above before merging.*\n"
+
+          # Escribir en el step summary de GitHub
+          summary_file = os.environ.get("GITHUB_STEP_SUMMARY", "")
+          if summary_file:
+              with open(summary_file, "a", encoding="utf-8") as f:
+                  f.write("\n## 🔍 Clean Code Analysis Detail\n\n")
+                  f.write(table)
+
+          # Guardar la tabla en un archivo para usarla en el comentario
+          with open("analysis_table.md", "w", encoding="utf-8") as f:
+              f.write("## 🔍 Code Analysis Results\n\n")
+              f.write(table)
+
+          # Mostrar también en la salida
+          print("\n" + table)
+
+          # Fallar si hay issues
+          if issue_count > 0:
+              print(f"❌ Clean code analysis failed with {issue_count} issue(s).", file=sys.stderr)
+              # Guardamos la salida para saber que falló
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as gh_out:
+                  gh_out.write("failed=true\n")
+              sys.exit(1)
+          else:
+              print("✅ Clean code analysis passed.")
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as gh_out:
+                  gh_out.write("failed=false\n")
+          EOF
+
+      - name: Upload analysis report as artifact (for debugging)
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-analysis-report
+          path: ${{ inputs.solution-path }}/analysis/format-report.json
+          retention-days: 1
+        if: always()
+
+      - name: Block PR and comment with table if analysis fails
+        if: ${{ failure() && github.event_name == 'pull_request' }}
+        run: |
+          PR_NUMBER=$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH")
+
+      - name: Comment on PR with analysis table
+        if: ${{ failure() && github.event_name == 'pull_request' }}
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: analysis
+          recreate: true
+          path: analysis_table.md

@@ -1,0 +1,83 @@
+<c-header class="customBody">
+  <app-custom-header [icons]="true" [select]="false" [search]="false" [ngStyle]="{ width: '100%' }">
+  </app-custom-header>
+  <c-header-divider></c-header-divider>
+  <c-container>
+    <c-row [ngStyle]="{ width: '100%' }">
+      <c-col>
+        <h3 [ngStyle]="{ 'text-align': 'center' }">List bookings</h3>
+
+        <c-input-group class="mb-3">
+          <label cInputGroupText for="bookingsEmailInput">Your e-mail </label>
+          <input
+            [(ngModel)]="email"
+            [value]="email"
+            id="bookingsEmailInput"
+            aria-label="Email"
+            cFormControl
+            type="email"
+            placeholder="Please enter your e-mail..."
+          />
+          <div [ngStyle]="{ 'text-align': 'end', 'padding-left': '10px' }">
+            <button
+              id="listBookingsButton"
+              [disabled]="!email"
+              cButton
+              color="success"
+              (click)="getBookingsByEmail(email)"
+            >
+              List Bookings
+              <svg cIcon name="cil-thumb-up"></svg>
+            </button>
+          </div>
+        </c-input-group>
+
+        <c-card
+          *ngFor="let booking of bookings"
+          [cBorder]="{ top: { color: 'info', width: 3 } }"
+          class="mb-3"
+        >
+          <c-row class="g-0">
+            <c-card-body cCol [md]="8">
+              <p cCardText>
+                <b>Booking id: </b>
+                {{ booking.id }} <br />
+                <b>Booking Date: </b>
+                {{ booking.bookingDate }} <br />
+                <b>Confirmation Date: </b>
+                {{ booking.confirmationDate ? booking.confirmationDate : '' }} <br />
+                <b>Closure Date: </b>
+                {{ booking.closureDate ? booking.closureDate : '' }} <br />
+                <b>Status: </b>
+                <b>{{ booking.status }}</b>
+              </p>
+            </c-card-body>
+
+            <table
+              *ngIf="booking.details && booking.details.length > 0"
+              cTable
+              hover
+              [responsive]="true"
+            >
+              <thead>
+                <tr>
+                  <th scope="col">Name</th>
+                  <th scope="col">Quantity</th>
+                  <th scope="col">Pharmacy</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let d of booking.details">
+                  <td>{{ d.name }}</td>
+                  <td>{{ d.quantity }}</td>
+                  <td>{{ d.pharmacyName }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </c-row>
+        </c-card>
+      </c-col>
+    </c-row>
+  </c-container>
+  <app-custom-footer class="bottomFooter"></app-custom-footer>
+</c-header>

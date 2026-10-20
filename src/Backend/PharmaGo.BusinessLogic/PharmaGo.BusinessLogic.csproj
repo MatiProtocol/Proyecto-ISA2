@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ExportationModel\ExportationModel.csproj" />
+    <ProjectReference Include="..\InstrumentationInterface\InstrumentationInterface.csproj" />
+    <ProjectReference Include="..\PharmaGo.Domain\PharmaGo.Domain.csproj" />
+    <ProjectReference Include="..\PharmaGo.Exceptions\PharmaGo.Exceptions.csproj" />
+    <ProjectReference Include="..\PharmaGo.IBusinessLogic\PharmaGo.IBusinessLogic.csproj" />
+    <ProjectReference Include="..\PharmaGo.IDataAccess\PharmaGo.IDataAccess.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NSec.Cryptography" Version="25.4.0" />
+  </ItemGroup>
+
+</Project>

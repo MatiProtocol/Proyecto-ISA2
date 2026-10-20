@@ -1,0 +1,129 @@
+<app-user-header title="Employee" link="employee"></app-user-header>
+<div class="bg-light min-vh-100 d-flex flex-row align-items-center">
+  <c-container>
+    <c-row class="justify-content-center mt-3 mb-3">
+      <c-col lg="7" md="9" xl="6">
+        <c-card class="mx-4">
+          <c-card-body class="p-4">
+            <form cForm [formGroup]="form" class="customAlign">
+              <h3>Create Drug</h3>
+              <c-input-group class="mb-3">
+                <span cInputGroupText>
+                  <svg cIcon [cIcon]="icons.cilBarcode"></svg>
+                </span>
+                <label class="visually-hidden" for="code">Code</label>
+                <input
+                  autoComplete="code"
+                  cFormControl
+                  placeholder="Code"
+                  formControlName="code"
+                  id="code"
+                />
+              </c-input-group>
+              <c-input-group class="mb-3">
+                <span cInputGroupText>
+                  <svg cIcon [cIcon]="icons.cilPencil"></svg>
+                </span>
+                <label class="visually-hidden" for="name">Name</label>
+                <input
+                  formControlName="name"
+                  autoComplete="name"
+                  cFormControl
+                  placeholder="Name"
+                  id="name"
+                />
+              </c-input-group>
+              <c-input-group class="mb-3">
+                <span cInputGroupText>
+                  <svg cIcon [cIcon]="icons.cilAlignCenter"></svg>
+                </span>
+                <label class="visually-hidden" for="symptom">Symptom</label>
+                <input
+                  formControlName="symptom"
+                  autoComplete="symptom"
+                  cFormControl
+                  placeholder="Symptom"
+                  id="symptom"
+                />
+              </c-input-group>
+              <c-input-group class="mb-3">
+                <span cInputGroupText>
+                  <svg cIcon [cIcon]="icons.cilLoop1"></svg>
+                </span>
+                <label class="visually-hidden" for="quantity">Quantity</label>
+                <input
+                  cFormControl
+                  type="number"
+                  placeholder="Quantity"
+                  value="1"
+                  min="1"
+                  formControlName="quantity"
+                  id="quantity"
+                />
+              </c-input-group>
+              <c-input-group class="mb-3">
+                <span cInputGroupText>
+                  <svg cIcon [cIcon]="icons.cilDollar"></svg>
+                </span>
+                <label class="visually-hidden" for="price">Price</label>
+                <input
+                  autoComplete="price"
+                  cFormControl
+                  placeholder="Price"
+                  type="input"
+                  formControlName="price"
+                  id="price"
+                />
+              </c-input-group>
+              <c-input-group class="mb-3">
+                <span cInputGroupText>
+                  <svg cIcon [cIcon]="icons.cilTask"></svg>
+                </span>
+                <label class="visually-hidden" for="prescription">Prescription</label>
+                <input aria-label="Prescription" placeholder="Prescription" disabled cFormControl />
+                <span cInputGroupText>
+                  <c-form-check>
+                    <label class="visually-hidden" for="checkbox">Check</label>
+                    <input
+                      cFormCheckInput
+                      formControlName="prescriptionControl"
+                      id="checkbox"
+                      type="checkbox"
+                    />
+                  </c-form-check>
+                </span>
+              </c-input-group>
+              <c-input-group class="mb-3">
+                <span cInputGroupText>
+                  <svg cIcon [cIcon]="icons.cilLibrary"></svg>
+                </span>
+                <label class="visually-hidden" for="unitmeasure">Unit Measure</label>
+                <select class="form-select" formControlName="unitMeasureControl" id="unitmeasure">
+                  <option *ngFor="let item of unitMeasure" [ngValue]="item.id">
+                    {{ item.name }}
+                  </option>
+                </select>
+              </c-input-group>
+              <c-input-group class="mb-3">
+                <span cInputGroupText>
+                  <svg cIcon [cIcon]="icons.cilPaint"></svg>
+                </span>
+                <label class="visually-hidden" for="presentation">Presentation</label>
+                <select class="form-select" formControlName="presentationControl" id="presentation">
+                  <option *ngFor="let item of presentation" [ngValue]="item.id">
+                    {{ item.name }}
+                  </option>
+                </select>
+              </c-input-group>
+              <div class="d-grid">
+                <button (click)="createDrug()" class="customButton" cButton color="primary">
+                  Create Drug
+                </button>
+              </div>
+            </form>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+  </c-container>
+</div>

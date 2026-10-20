@@ -1,0 +1,193 @@
+name: "Reusable Frontend Code Analysis"
+
+on:
+  workflow_call:
+    inputs:
+      frontend-path:
+        type: string
+        description: "Relative path to the frontend root (where package.json is located)"
+        required: false
+        default: "."
+      node-version:
+        type: string
+        description: "Node.js version to use"
+        required: false
+        default: "20.x"
+
+env:
+  NODE_VERSION: ${{ inputs.node-version }}
+
+jobs:
+  analysis:
+    name: Run ESLint & Prettier checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        working-directory: ${{ inputs.frontend-path }}
+        run: |
+          npm install
+
+      # Run ESLint with JSON output
+      - name: Run ESLint
+        id: eslint
+        working-directory: ${{ inputs.frontend-path }}
+        continue-on-error: true
+        run: |
+          npx eslint . --max-warnings 0 --format json --output-file eslint-report.json || true
+
+      # Run Prettier check and capture output
+      - name: Run Prettier check
+        id: prettier
+        working-directory: ${{ inputs.frontend-path }}
+        continue-on-error: true
+        run: |
+          npx prettier --check . 2>&1 | tee prettier-output.txt
+          # Expose exit code for later use
+          echo "prettier_exit=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+
+      # Python script to parse both reports and generate table
+      - name: Generate analysis table and decide failure
+        id: analysis
+        working-directory: ${{ inputs.frontend-path }}
+        shell: bash
+        run: |
+          python3 <<'EOF'
+          import json
+          import sys
+          import os
+          import re
+
+          eslint_file = "eslint-report.json"
+          prettier_file = "prettier-output.txt"
+
+          issues = []
+          table_rows = []
+
+          # ---- Parse ESLint report ----
+          if os.path.isfile(eslint_file):
+              with open(eslint_file, "r", encoding="utf-8") as f:
+                  eslint_data = json.load(f)
+
+              for file_result in eslint_data:
+                  file_path = file_result.get("filePath", "Unknown file")
+                  # Remove current working directory prefix for cleaner display
+                  if file_path.startswith(os.getcwd()):
+                      file_path = os.path.relpath(file_path, os.getcwd())
+                  messages = file_result.get("messages", [])
+                  for msg in messages:
+                      if msg.get("severity") == 2:  # error
+                          line = msg.get("line", "?")
+                          col = msg.get("column", "?")
+                          rule = msg.get("ruleId", "eslint")
+                          desc = msg.get("message", "").replace("|", "\\|")
+                          table_rows.append([
+                              file_path, line, col, f"ESLint: {rule}", desc
+                          ])
+                          issues.append(f"ESLint in {file_path}:{line} - {desc}")
+          else:
+              print("⚠️ ESLint report not generated (maybe no issues or command failed)", file=sys.stderr)
+
+          # ---- Parse Prettier output ----
+          # Prettier --check outputs lines like "[warn] src/file.js" or "src/file.js"
+          # We also need to know which files are not formatted.
+          # A simpler approach: look for lines that end with (maybe a warning marker)
+          prettier_unformatted = []
+          if os.path.isfile(prettier_file):
+              with open(prettier_file, "r", encoding="utf-8") as f:
+                  for line in f:
+                      line = line.strip()
+                      # Typical output: "[warn] src/index.js" or just "src/index.js"
+                      if re.search(r'\(prettier\)', line) or (line and not line.startswith('Checking') and not line.startswith('All matched files')):
+                          # Extract file path
+                          match = re.search(r'\]\s*(.+)$', line)
+                          if match:
+                              file_path = match.group(1)
+                          else:
+                              file_path = line
+                          if file_path and file_path not in prettier_unformatted:
+                              prettier_unformatted.append(file_path)
+          else:
+              print("⚠️ Prettier output file not found", file=sys.stderr)
+
+          # Add Prettier issues to table
+          for file_path in prettier_unformatted:
+              table_rows.append([
+                  file_path, "-", "-", "Prettier", "File not correctly formatted"
+              ])
+              issues.append(f"Prettier: {file_path} needs formatting")
+
+          # Build markdown table
+          issue_count = len(issues)
+          table = "| File | Line | Column | Tool | Description |\n"
+          table += "|------|------|--------|------|-------------|\n"
+          for row in table_rows:
+              table += f"| `{row[0]}` | {row[1]} | {row[2]} | {row[3]} | {row[4]} |\n"
+
+          table += "|------|------|--------|------|-------------|\n"
+          if issue_count == 0:
+              table += "| **Total** | | | | **✅ 0 issues** |\n"
+              table += "\n*Great! No code style or linting issues found. 🚀*\n"
+          else:
+              table += f"| **Total** | | | | **❌ {issue_count} issues** |\n"
+              table += "\n*Please fix the issues above before merging.*\n"
+
+          # Write to GitHub step summary
+          summary_file = os.environ.get("GITHUB_STEP_SUMMARY", "")
+          if summary_file:
+              with open(summary_file, "a", encoding="utf-8") as f:
+                  f.write("\n## 🔍 Frontend Code Analysis Details\n\n")
+                  f.write(table)
+
+          # Save table for PR comment
+          with open("analysis_table.md", "w", encoding="utf-8") as f:
+              f.write("## 🔍 Frontend Code Analysis Results\n\n")
+              f.write(table)
+
+          # Print table to console
+          print("\n" + table)
+
+          # Fail if issues found
+          if issue_count > 0:
+              print(f"❌ Code analysis failed with {issue_count} issue(s).", file=sys.stderr)
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as gh_out:
+                  gh_out.write("failed=true\n")
+              sys.exit(1)
+          else:
+              print("✅ Code analysis passed.")
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as gh_out:
+                  gh_out.write("failed=false\n")
+          EOF
+
+      # Upload reports as artifacts (for debugging)
+      - name: Upload ESLint report
+        uses: actions/upload-artifact@v4
+        with:
+          name: eslint-report
+          path: ${{ inputs.frontend-path }}/eslint-report.json
+          retention-days: 1
+        if: always()
+
+      - name: Upload Prettier output
+        uses: actions/upload-artifact@v4
+        with:
+          name: prettier-output
+          path: ${{ inputs.frontend-path }}/prettier-output.txt
+          retention-days: 1
+        if: always()
+
+      - name: Comment on PR with analysis table
+        if: ${{ failure() && github.event_name == 'pull_request' }}
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: frontend-analysis
+          recreate: true
+          path: ${{ inputs.frontend-path }}/analysis_table.md

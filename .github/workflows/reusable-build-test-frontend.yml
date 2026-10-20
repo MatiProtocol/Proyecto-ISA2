@@ -1,0 +1,55 @@
+name: Reusable Build Angular Frontend
+
+on:
+  workflow_call:
+    inputs:
+      frontend-path:
+        type: string
+        description: "The relative path to the package.json file of the Angular frontend project"
+        required: false
+        default: "./src/Frontend"
+      node-version:
+        type: string
+        description: "The version of Node.js to use"
+        required: false
+        default: "20.x"
+
+env:
+  NODE_VERSION: ${{ inputs.node-version }}
+  FRONTEND_PATH: ${{ inputs.frontend-path }}
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: ${{ env.FRONTEND_PATH }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: ${{ env.FRONTEND_PATH }}
+
+      - name: Build Angular app
+        run: npm run build -- --configuration production
+        working-directory: ${{ env.FRONTEND_PATH }}
+
+      - name: Run Cypress tests with server
+        run: npx --yes start-server-and-test start http://localhost:4200 cypress:run
+        working-directory: ${{ env.FRONTEND_PATH }}
+
+      - name: Report test results (JUnit)
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Frontend Test Results
+          path: ${{ env.FRONTEND_PATH }}/test-results/**/*.xml
+          reporter: java-junit
+          fail-on-error: true

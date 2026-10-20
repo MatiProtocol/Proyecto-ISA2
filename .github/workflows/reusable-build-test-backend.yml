@@ -1,0 +1,110 @@
+name: Reusable Build and Test
+
+on:
+  workflow_call:
+    inputs:
+      solution-path:
+        type: string
+        description: "The relative path to the .sln file"
+        required: false
+        default: "."
+      solution-name:
+        type: string
+        description: "The name of the solution file (e.g., MyApp.sln)"
+        required: true
+      report-coverage-title:
+        type: string
+        description: "A title for the coverage report"
+        required: false
+        default: "Reporte de Cobertura"
+
+env:
+  DOTNET_VERSION: "8.0.x"
+  FULL_SOLUTION_PATH: ${{ inputs.solution-path }}/${{ inputs.solution-name }}
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - run: dotnet restore ${{ env.FULL_SOLUTION_PATH }}
+      - run: dotnet build ${{ env.FULL_SOLUTION_PATH }} --configuration Release
+
+  test:
+    name: Test
+    needs: [build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Check for Source Code Files
+        id: check_sources
+        run: |
+          SOURCE_FILES=$(find ${{ inputs.solution-path }} -type f -name "*.cs" \
+            ! -name "Program.cs" \
+            ! -name "*DbContext.cs" \
+            ! -name "*Context.cs" \
+            ! -path "*/Migrations/*")
+          if [[ -n "$SOURCE_FILES" ]]; then
+            echo "required_tests=true" >> $GITHUB_OUTPUT
+          else
+            echo "required_tests=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate Results and Coverage Reports
+        if: steps.check_sources.outputs.required_tests == 'true'
+        run: dotnet test ${{ env.FULL_SOLUTION_PATH }} --configuration Release --verbosity normal --logger "trx;LogFilePrefix=test-results" --results-directory ${{ inputs.solution-path}}/test-results --collect:"XPlat Code Coverage" --settings .runsettings
+
+      - name: Upload Test Results
+        if: always() && steps.check_sources.outputs.required_tests == 'true'
+        uses: dorny/test-reporter@v1
+        with:
+          name: Test Results
+          path: ${{ inputs.solution-path }}/test-results/test-results*.trx
+          reporter: dotnet-trx
+          fail-on-error: true
+
+      - name: Generate Coverage Report
+        if: steps.check_sources.outputs.required_tests == 'true'
+        uses: danielpalme/ReportGenerator-GitHub-Action@5.3.9
+        with:
+          reports: ${{ inputs.solution-path }}/test-results/**/coverage.cobertura.xml
+          targetdir: coverage-report
+          reporttypes: "Html;Cobertura"
+
+      - name: Upload Coverage Artifact
+        if: steps.check_sources.outputs.required_tests == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Coverage Report
+          path: coverage-report
+
+      - name: Check Coverage
+        if: steps.check_sources.outputs.required_tests == 'true'
+        uses: irongut/CodeCoverageSummary@v1.3.0
+        with:
+          filename: coverage-report/Cobertura.xml
+          badge: true
+          fail_below_min: true
+          format: markdown
+          thresholds: "85 90"
+          output: "file"
+
+      - name: Add Coverage Comment on PR
+        if: github.event_name == 'pull_request' && steps.check_sources.outputs.required_tests == 'true'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: build-test
+          recreate: true
+          message: |
+            ${{ hashFiles('code-coverage-results.md') && '### Code Coverage Report\n\n' || '⚠️ Code coverage report not found.' }}
+          path: code-coverage-results.md

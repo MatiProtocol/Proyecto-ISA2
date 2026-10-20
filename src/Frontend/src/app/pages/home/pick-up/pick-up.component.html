@@ -1,0 +1,115 @@
+<c-header>
+  <app-custom-header [icons]="true" [select]="false" [search]="false" [ngStyle]="{ width: '100%' }">
+  </app-custom-header>
+</c-header>
+<body class="customBody">
+  <c-container class="mt-4">
+    <div class="card mb-4">
+      <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">Search booking</h5>
+      </div>
+      <div class="card-body">
+        <c-row class="align-items-end g-3 mb-3">
+          <c-col md="8">
+            <c-input-group>
+              <label cInputGroupText for="booking-id-input">Booking ID</label>
+              <input
+                [(ngModel)]="bookingId"
+                id="booking-id-input"
+                type="number"
+                cFormControl
+                placeholder="Enter booking ID..."
+              />
+            </c-input-group>
+          </c-col>
+          <c-col md="4" class="text-md-end">
+            <button
+              id="search-booking-pick-btn"
+              [disabled]="!bookingId"
+              cButton
+              color="primary"
+              (click)="searchBooking()"
+              class="w-100 w-md-auto"
+            >
+              Search Booking
+              <svg cIcon name="cilMagnifyingGlass" class="ms-2"></svg>
+            </button>
+          </c-col>
+        </c-row>
+
+        <div *ngIf="booking">
+          <c-row>
+            <div class="w-100">
+              <!-- Opcional: para que el h5 ocupe todo el ancho -->
+              <h5 class="mb-3">Booking details</h5>
+            </div>
+            <c-col md="6">
+              <p class="mb-2" id="booking-bookerEmail">
+                <strong>Booker email:</strong> {{ booking.bookerEmail }}
+              </p>
+              <p class="mb-2" id="booking-bookingDate">
+                <strong>Booking date:</strong> {{ booking.bookingDate | date : 'dd/MM/yyyy HH:mm' }}
+              </p>
+              <p class="mb-2" id="booking-confirmationDate" *ngIf="booking.confirmationDate">
+                <strong>Confirmation date:</strong>
+                {{ booking.confirmationDate | date : 'dd/MM/yyyy HH:mm' }}
+              </p>
+              <p
+                class="mb-2 text-muted"
+                id="booking-confirmationDate-none"
+                *ngIf="!booking.confirmationDate"
+              >
+                <strong>Confirmation date:</strong> <span class="text-warning">-</span>
+              </p>
+            </c-col>
+            <c-col md="6">
+              <p class="mb-2" id="booking-status">
+                <strong>Status: </strong>
+                <span class="text">{{ booking.status }}</span>
+              </p>
+              <p class="mb-2" id="booking-totalAmount">
+                <strong>Total amount: </strong>
+                <span class="fw-bold">{{ booking.totalAmount | currency }}</span>
+              </p>
+            </c-col>
+          </c-row>
+        </div>
+      </div>
+    </div>
+    <div class="card mb-4" *ngIf="booking">
+      <div class="card-header bg-success text-white">
+        <h5 class="mb-0">Pick up booking</h5>
+      </div>
+      <div class="card-body">
+        <c-row class="align-items-end g-3">
+          <c-col md="8">
+            <c-input-group>
+              <label cInputGroupText for="private-key-input">Private key</label>
+              <input
+                [(ngModel)]="privateKey"
+                id="private-key-input"
+                cFormControl
+                type="text"
+                placeholder="Enter the private key provided..."
+              />
+            </c-input-group>
+          </c-col>
+          <c-col md="4" class="text-md-end">
+            <button
+              id="pick-up-btn"
+              [disabled]="!bookingId"
+              cButton
+              color="success"
+              (click)="pickUpBooking()"
+              class="w-100 w-md-auto"
+            >
+              Pick Up Booking
+              <svg cIcon name="cilThumbUp" class="ms-2"></svg>
+            </button>
+          </c-col>
+        </c-row>
+      </div>
+    </div>
+  </c-container>
+</body>
+<app-custom-footer class="bottomFooter"></app-custom-footer>

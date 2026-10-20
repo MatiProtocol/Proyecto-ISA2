@@ -1,0 +1,79 @@
+<app-user-header title="Employee" link="employee"></app-user-header>
+<c-container class="mt-3">
+  <c-row [ngStyle]="{ width: '100%' }">
+    <c-col>
+      <c-row class="g-0 customAlign">
+        <h3>Booking Requests</h3>
+        <c-card
+          *ngFor="let booking of bookings"
+          [cBorder]="{ top: { color: 'info', width: 3 } }"
+          class="mb-3"
+        >
+          <c-row class="g-0">
+            <c-card-body cCol [md]="8">
+              <p cCardText>
+                <b>Id:</b> {{ booking.id }} <br />
+                <b>Status:&nbsp;</b>
+                <b>{{ booking.status }}</b>
+                <br />
+                <b>Date:</b>
+                {{ booking.bookingDate }}
+              </p>
+            </c-card-body>
+            <div>
+              <table *ngIf="booking.details.length > 0" cTable hover [responsive]="true">
+                <thead>
+                  <tr>
+                    <th scope="col">Drug Code</th>
+                    <th scope="col">Drug Name</th>
+                    <th scope="col">Quantity</th>
+                    <th scope="col">Pharmacy</th>
+                    <th scope="col">Prescription</th>
+                    <th *ngIf="booking.confirmationDate !== ''" scope="col">Confirmation Date</th>
+                    <th *ngIf="booking.closureDate !== ''" scope="col">Closure Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let d of booking.details">
+                    <td>{{ d.code }}</td>
+                    <td>{{ d.name }}</td>
+                    <td>{{ d.quantity }}</td>
+                    <td>{{ d.pharmacyName }}</td>
+                    <td *ngIf="d.prescriptionImage !== null">Has Prescription</td>
+                    <td *ngIf="d.prescriptionImage === null">No Prescription</td>
+                    <td *ngIf="booking.confirmationDate !== ''">{{ booking.confirmationDate }}</td>
+                    <td *ngIf="booking.closureDate !== ''">{{ booking.closureDate }}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <button
+                cButton
+                color="success"
+                class="ms-3 mb-3"
+                (click)="approveBooking(booking.id)"
+                [disabled]="booking.status !== 'Pending'"
+              >
+                Approve
+              </button>
+              <button
+                cButton
+                color="danger"
+                class="ms-3 mb-3"
+                (click)="cancelBooking(booking.id)"
+                [disabled]="booking.status !== 'Pending'"
+              >
+                Cancel
+              </button>
+            </div>
+          </c-row>
+        </c-card>
+      </c-row>
+    </c-col>
+
+    <div *ngIf="bookings.length === 0" class="alert alert-info" role="alert">
+      <h4 class="alert-heading">The list is empty.</h4>
+      <p>There are no booking requests to display... yet.</p>
+      <hr />
+    </div>
+  </c-row>
+</c-container>
